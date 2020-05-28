@@ -12,7 +12,7 @@ public class MetricRepositoryImpl implements MetricRepository {
 
     @Override
     public int getSum(String key) throws Exception {
-        final int MINUTES = 60;
+        final int EXPIRE_MINUTES = 60;
 
         if(!metrics.containsKey(key)){
             throw new Exception(String.format("There are no metrics with the key %s", key));
@@ -23,12 +23,22 @@ public class MetricRepositoryImpl implements MetricRepository {
 
         // filter out metrics over MINUTES minutes
         List<Metric> filteredList = metricsList.stream()
-            .filter(metric -> minutesDiff( metric.getDate(), currentDataTime ) <= MINUTES)
+            .filter(metric -> minutesDiff( metric.getDate(), currentDataTime ) <= EXPIRE_MINUTES)
             .collect(Collectors.toList());
 
         Integer sum = filteredList.stream()
                 .mapToInt(metric -> metric.getValue())
                 .sum();
+
+        // filter out metrics over MINUTES minutes
+        List<Metric> metricsToRemoveList = metricsList.stream()
+                .filter(metric -> minutesDiff( metric.getDate(), currentDataTime ) > EXPIRE_MINUTES)
+                .collect(Collectors.toList());
+
+        // remove metric older then EXPIRE_MINUTES minutes
+        for(Metric m : metricsToRemoveList){
+            metricsList.remove(m);
+        }
 
         return sum;
     }
